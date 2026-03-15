@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Response
 import httpx
 import os
+import uvicorn
 
 app = FastAPI( )
 
@@ -15,16 +16,13 @@ async def telegram_webhook(token: str, request: Request):
     response = Response(content="OK", status_code=200)
     update_data = await request.json()
 
-    # 🔹 BU YERDA follow_redirects=True QO'ShILDI
+    # follow_redirects=True qo'shildi (302 xatosini yo'qotish uchun)
     async with httpx.AsyncClient(follow_redirects=True ) as client:
         try:
             gas_response = await client.post(GAS_WEB_APP_URL, json=update_data, timeout=30.0)
-            gas_response.raise_for_status()
             print(f"Forwarded to GAS. Status: {gas_response.status_code}")
-        except httpx.RequestError as exc:
-            print(f"An error occurred while requesting GAS: {exc}" )
-        except httpx.HTTPStatusError as exc:
-            print(f"Error response {exc.response.status_code} while requesting GAS" )
+        except Exception as exc:
+            print(f"Error: {exc}")
 
     return response
 
@@ -32,3 +30,7 @@ async def telegram_webhook(token: str, request: Request):
 async def root():
     return {"message": "Telegram Webhook Proxy is running!"}
 
+# 🔹 Render uchun portni aniq ko'rsatish qismi qo'shildi
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
